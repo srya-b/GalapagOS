@@ -1,9 +1,6 @@
 /* kernel.c - the C part of the kernel
  * vim:ts=4 noexpandtab
  */
-////////////////////
-/*      */
-////////////////////
 #include "multiboot.h"
 #include "x86_desc.h"
 #include "lib.h"
@@ -13,11 +10,14 @@
 #include "int_handlers.h"
 #include "paging.h"
 #include "assembly_linkage.h"
-
+#include "terminal.h"
+#include "file_system.h"
 /* Macros. */
+
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
 
+static uint32_t fs_address;
 /* Check if MAGIC is valid and print the Multiboot information structure
    pointed by ADDR. */
 void
@@ -28,6 +28,7 @@ entry (unsigned long magic, unsigned long addr)
 	/* Clear the screen. */
 	clear();
 
+	int valid_fs = 0;
 	/* Am I booted by a Multiboot-compliant boot loader? */
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
 	{
@@ -66,6 +67,7 @@ entry (unsigned long magic, unsigned long addr)
 				printf("0x%x ", *((char*)(mod->mod_start+i)));
 			}
 			printf("\n");
+			fs_address = mod->mod_start;
 			mod_count++;
 			mod++;
 		}
@@ -216,8 +218,8 @@ entry (unsigned long magic, unsigned long addr)
 	i8259_init();
 
     /* Init the RTC */
-	rtc_init();
-
+	rtc_open();
+	
 	/* Enable interrupts */
 	/* Do not enable the following until after you have set up your
 	 * IDT correctly otherwise QEMU will triple fault and simple close
@@ -231,14 +233,59 @@ entry (unsigned long magic, unsigned long addr)
 	enable_irq(KEYBOARD_INT);
 
 	/*Enable the rtc irq line on the master*/
-	//enable_irq(RTC_INT);
+	enable_irq(RTC_INT);
 	
 	/*Initialize paging*/
 	paging_init();
-
+	
+	terminal_open();
+	
 	sti();
 
+	update_cursor(0,0);
+	fs_init(fs_address);
+
+	/* Print contents of a file by file-name */
+	clear_terminal();
+	uint8_t bro[5000];
+	const char * file_name = "grep";
+	int r = fs_read(file_name, 0,0, (uint8_t*)(&bro));
+	clear_terminal();
+	terminal_write(r, (uint8_t*)(&bro));
+
+	/* Print files in file system */
+	clear_terminal();
+	uint8_t read_num = 32; // So that we can also read the file size (and write it to the screen in a meaningful way)
+	int num_read = dir_read(read_num, (uint8_t*)(&bro));
+	terminal_write(num_read, (uint8_t*)(&bro));
+	terminal_write(1, "\n");
+	while (0 != num_read) {
+		num_read = dir_read(read_num, (uint8_t*)(&bro)); 
+		terminal_write(num_read, (uint8_t*)(&bro));
+		terminal_write(1, "\n");
+	}
+
 	/* Execute the first program (`shell') ... */
+	uint8_t tru[128];
+	while (1) {
+		int ret = terminal_read(128,(uint8_t*)(&tru));
+		terminal_write(ret, (uint8_t*)(&tru));
+	}
+
+	clear_terminal();	
+	/* Demonstrate rtc works with rtc_read and rtc_write */
+
+	uint32_t frequency = 0;
+	while (1) {
+		uint8_t * wait = (uint8_t*) "0, wait for flag to be set\n";
+		terminal_write(strlen( (int8_t*)wait ), wait);
+
+		uint8_t * set = (uint8_t*) "1, FLAG SET\n";
+		if (rtc_read() == 0) terminal_write(strlen( (int8_t*)set ), set);
+
+		rtc_write(frequency);
+		frequency = (frequency + 1) % 1024;
+	}
 
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");

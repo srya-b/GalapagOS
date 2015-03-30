@@ -1,45 +1,60 @@
 #include "int_handlers.h"
 #include "rtc.h"
+#include "terminal.h"
+#define LSHIFT 0x2a
+#define RSHIFT 0x36
+#define LCTRL 0x1d
+#define RCTRL 0x1d
+#define CAPS 0x3a
 
-static unsigned char kbdus[128] =
-{
+static unsigned char kbdus[4][128] =
+{{
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
   '9', '0', '-', '=', '\b',	/* Backspace */
-  '\t',			/* Tab */
-  'q', 'w', 'e', 'r',	/* 19 */
-  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
-    0,			/* 29   - Control */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
- '\'', '`',   0,		/* Left shift */
- '\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-  'm', ',', '.', '/',   0,				/* Right shift */
-  '*',
-    0,	/* Alt */
-  ' ',	/* Space bar */
-    0,	/* Caps lock */
-    0,	/* 59 - F1 key ... > */
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,	/* < ... F10 */
-    0,	/* 69 - Num lock*/
-    0,	/* Scroll Lock */
-    0,	/* Home key */
-    0,	/* Up Arrow */
-    0,	/* Page Up */
-  '-',
-    0,	/* Left Arrow */
-    0,
-    0,	/* Right Arrow */
-  '+',
-    0,	/* 79 - End key*/
-    0,	/* Down Arrow */
-    0,	/* Page Down */
-    0,	/* Insert Key */
-    0,	/* Delete Key */
-    0,   0,   0,
-    0,	/* F11 Key */
-    0,	/* F12 Key */
+  '\t',			/* Tab */ 'q', 'w', 'e', 'r',	/* 19 */'t', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */ 0, /* 29   - Control */
+  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */ '\'', '`',   0,		/* Left shift */
+ '\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */ 'm', ',', '.', '/',   0,				/* Right shift */
+  '*',  0,	/* Alt */ ' ',	/* Space bar */ 0,	/* Caps lock */ 0,	/* 59 - F1 key ... > */ 0,   0,   0,   0,   0,   0,   0,   0,
+    0,	/* < ... F10 */ 0,	/* 69 - Num lock*/ 0,	/* Scroll Lock */ 0,	/* Home key */ 0,	/* Up Arrow */
+    0,	/* Page Up */ '-', 0,	/* Left Arrow */ 0, 0,	/* Right Arrow */ '+',  0,	/* 79 - End key*/ 0,	/* Down Arrow */
+    0,	/* Page Down */ 0,	/* Insert Key */ 0,	/* Delete Key */ 0,   0,   0, 0,	/* F11 Key */ 0,	/* F12 Key */
     0,	/* All other keys are undefined */
-};
+}, {
+	0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b',
+	'\t',
+	'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}',  '\n', 0 /* L-ctrl */,
+	'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '\"', '~', 0 /* L-shift */,
+	'|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0 /* R-shift */,
+	'*', 0 /* alt */, ' ', 0, 
+    0,	/* Caps lock */ 0,	/* 59 - F1 key ... > */ 0,   0,   0,   0,   0,   0,   0,   0, 0,	/* < ... F10 */
+    0,	/* 69 - Num lock*/ 0,	/* Scroll Lock */ 0,	/* Home key */ 0,	/* Up Arrow */ 0,	/* Page Up */ '-', 0,	/* Left Arrow */
+    0, 0,	/* Right Arrow */ '+', 0,	/* 79 - End key*/ 0,	/* Down Arrow */ 0,	/* Page Down */ 0,	/* Insert Key */ 0,	/* Delete Key */
+    0,   0,   0, 0,	/* F11 Key */  0,	/* F12 Key */ 0,	/* All other keys are undefined */
+}, {
+	 0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b', '\t',
+	'Q', 'W', 'E', 'R','T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\n', 0 /* L-ctrl */, 'A', 'S',
+	'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', '\'', '`', 0,'\\', 'Z', 'X', 'C', 'V',
+	'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0,
+    0,	/* Caps lock */ 0,	/* 59 - F1 key ... > */ 0,   0,   0,   0,   0,   0,   0,   0, 0,	/* < ... F10 */
+    0,	/* 69 - Num lock*/ 0,	/* Scroll Lock */ 0,	/* Home key */ 0,	/* Up Arrow */ 0,	/* Page Up */ '-', 0,	/* Left Arrow */
+    0, 0,	/* Right Arrow */ '+', 0,	/* 79 - End key*/ 0,	/* Down Arrow */ 0,	/* Page Down */ 0,	/* Insert Key */ 0,	/* Delete Key */
+    0,   0,   0, 0,	/* F11 Key */  0,	/* F12 Key */ 0,	/* All other keys are undefined */
+}, {
+	0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b',
+	'\t', 'q', 'w', 'e', 'r',	/* 19 */'t', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */ 0, /* 29   - Control */
+  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ':', '\"', '~', 0 /* L-shift */,
+	'|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0 /* R-shift */,
+	'*', 0 /* alt */, ' ', 0,  0,	/* Caps lock */ 0,	/* 59 - F1 key ... > */ 0,   0,   0,   0,   0,   0,   0,   0, 0,	/* < ... F10 */
+    0,	/* 69 - Num lock*/ 0,	/* Scroll Lock */ 0,	/* Home key */ 0,	/* Up Arrow */ 0,	/* Page Up */ '-', 0,	/* Left Arrow */
+    0, 0,	/* Right Arrow */ '+', 0,	/* 79 - End key*/ 0,	/* Down Arrow */ 0,	/* Page Down */ 0,	/* Insert Key */ 0,	/* Delete Key */
+    0,   0,   0, 0,	/* F11 Key */  0,	/* F12 Key */ 0,	/* All other keys are undefined */
+
+}};
+
+static int caps_lock = 0;
+static int shift = 0;
+static int ctrl = 0;
+volatile uint8_t rtc_flag = 0;
 
 /************** EXCEPTIONS ********************/
 
@@ -340,12 +355,42 @@ void SIMD_floating_point() {
  */
 void keyboard_int() {
     send_eoi(KEYBOARD_INT);
-	int key_scancode = inb(KEYBOARD_PORT);
-	if (key_scancode <= SCAN_LIMIT) {
-		clear();
-		printf("keyboard\n");
-		printf("%c\n", kbdus[key_scancode]);
-	}
+		int key_scancode = inb(KEYBOARD_PORT);
+		if (key_scancode == LSHIFT || key_scancode == RSHIFT)
+			shift = 1;
+		else if (key_scancode == (LSHIFT + 0x80) || key_scancode == (RSHIFT + 0x80))
+			shift = 0;
+		else if (key_scancode == LCTRL)
+			ctrl = 1;
+		else if (key_scancode == (LCTRL + 0x80))
+			ctrl = 0;
+		else if (key_scancode == CAPS && caps_lock == 0)
+			caps_lock = 1;
+		else if (key_scancode == CAPS && caps_lock == 1)
+			caps_lock = 0;
+
+		if (key_scancode <= SCAN_LIMIT) {
+			if (shift == 1 && caps_lock == 0)
+			{
+				put_char(kbdus[1][key_scancode]);
+			}
+			else if (shift == 0 && caps_lock == 1)
+			{
+				put_char(kbdus[2][key_scancode]);
+			}
+			else if (shift == 1 && caps_lock == 1)
+			{
+				put_char(kbdus[3][key_scancode]);
+			}
+			else if (ctrl == 1 && kbdus[0][key_scancode] == 'l')
+			{
+				clear_terminal();
+			}
+			else 
+				put_char(kbdus[0][key_scancode]);
+		}
+
+
 }
 
 /* 
@@ -357,9 +402,8 @@ void keyboard_int() {
  *   SIDE EFFECTS: prints interrupt message, reads from Register C to allow more RTC ints to come in 
  */
 void rtc_int() {
-	printf("rtc\n");
 	outb(REG_C, RTC_IDX_PORT);	// read from register c
 	inb(RTC_WR_PORT);			// read in, but don't do anything with it
-	test_interrupts();
+	rtc_flag = 1;	
 	send_eoi(RTC_INT);
 }
