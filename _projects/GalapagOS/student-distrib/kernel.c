@@ -12,6 +12,11 @@
 #include "assembly_linkage.h"
 #include "terminal.h"
 #include "file_system.h"
+#define ERROR -1
+#define SUCCESS 0
+#define MAX_TEST_FREQUENCY 1096
+#define SPACE 0x20
+
 /* Macros. */
 
 /* Check if the bit BIT in FLAGS is set. */
@@ -28,7 +33,6 @@ entry (unsigned long magic, unsigned long addr)
 	/* Clear the screen. */
 	clear();
 
-	int valid_fs = 0;
 	/* Am I booted by a Multiboot-compliant boot loader? */
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
 	{
@@ -249,20 +253,20 @@ entry (unsigned long magic, unsigned long addr)
 	clear_terminal();
 	uint8_t bro[5000];
 	const char * file_name = "grep";
-	int r = fs_read(file_name, 0,0, (uint8_t*)(&bro));
+	int r = fs_read((uint8_t*)file_name, 0,0, (uint8_t*)(&bro));
 	clear_terminal();
 	terminal_write(r, (uint8_t*)(&bro));
 
 	/* Print files in file system */
 	clear_terminal();
-	uint8_t read_num = 32; // So that we can also read the file size (and write it to the screen in a meaningful way)
+	uint8_t read_num = 33; // So that we can also read the file size (and write it to the screen in a meaningful way)
 	int num_read = dir_read(read_num, (uint8_t*)(&bro));
 	terminal_write(num_read, (uint8_t*)(&bro));
-	terminal_write(1, "\n");
+	terminal_write(1, (uint8_t*)"\n");
 	while (0 != num_read) {
 		num_read = dir_read(read_num, (uint8_t*)(&bro)); 
 		terminal_write(num_read, (uint8_t*)(&bro));
-		terminal_write(1, "\n");
+		terminal_write(1, (uint8_t*)"\n");
 	}
 
 	/* Execute the first program (`shell') ... */
@@ -275,17 +279,50 @@ entry (unsigned long magic, unsigned long addr)
 	clear_terminal();	
 	/* Demonstrate rtc works with rtc_read and rtc_write */
 
+	// uint32_t frequency = 0;
+	// while (1) {
+	// 	uint8_t * wait = (uint8_t*) "0, wait for flag to be set\n";
+	// 	terminal_write(strlen( (int8_t*)wait ), wait);
+
+	// 	uint8_t * set = (uint8_t*) "1, FLAG SET\n";
+	// 	if (rtc_read() == 0) terminal_write(strlen( (int8_t*)set ), set);
+
+	// 	rtc_write(frequency);
+	// 	frequency = (frequency + 1) % 1024;
+	// }
 	uint32_t frequency = 0;
 	while (1) {
-		uint8_t * wait = (uint8_t*) "0, wait for flag to be set\n";
+		uint8_t * wait = (uint8_t*) "rtc flag is 0\n";
 		terminal_write(strlen( (int8_t*)wait ), wait);
 
-		uint8_t * set = (uint8_t*) "1, FLAG SET\n";
-		if (rtc_read() == 0) terminal_write(strlen( (int8_t*)set ), set);
+		uint8_t * set = (uint8_t*) "rtc flag is 1\n";
+		if (rtc_read() == SUCCESS) terminal_write(strlen( (int8_t*)set ), set);
 
-		rtc_write(frequency);
-		frequency = (frequency + 1) % 1024;
+ 	// // UNCOMMENT TO SELECTIVELY TEST FREQUENCIES
+	// 	uint32_t your_frequency = 0;
+	// 	uint8_t * write_test = (uint8_t*) "SUCCESSFUL WRITE\n";
+	// 	if (rtc_write(your) == SUCCESS) terminal_write( strlen( (int8_t*)balls), balls);
+	// // COMMENT BOTTOM UNTIL "frequency = ..." FOR SELECTIVE TEST
+
+		uint8_t * attempt_frequency;
+		if (rtc_write(frequency) == ERROR) {
+			attempt_frequency = (uint8_t*) "DID_NOT_WRITE ";
+			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
+			attempt_frequency = (uint8_t*) "    \n";
+			write_dec_to_char(frequency, attempt_frequency);
+			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
+			attempt_frequency[0]=attempt_frequency[1]=attempt_frequency[2]=attempt_frequency[3]=(uint8_t)SPACE;
+		} else {
+			attempt_frequency = (uint8_t *)"GOOD_WRITE, POWER OF 2 FOUND! ";
+			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
+			attempt_frequency = (uint8_t*) "    \n";
+			write_dec_to_char(frequency, attempt_frequency);
+			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
+			attempt_frequency[0]=attempt_frequency[1]=attempt_frequency[2]=attempt_frequency[3]=(uint8_t)SPACE;
+		}
+		frequency = (frequency + 1) % MAX_TEST_FREQUENCY;
 	}
+
 
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");

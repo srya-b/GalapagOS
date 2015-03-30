@@ -18,4 +18,5 @@ void clear_terminal();
 int terminal_write(int count, uint8_t *buf);
 int terminal_read(int count, uint8_t *buf);
 void update_cursor(int row, int col);
+
 #endif
