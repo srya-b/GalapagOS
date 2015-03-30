@@ -5,6 +5,7 @@
 #include "types.h"
 #include "lib.h"
 #include "i8259.h"
+#include "terminal.h"
 
 #define KEYBOARD_INT 1
 #define SLAVE_INT 2
