@@ -44,4 +44,7 @@ int dir_read(uint32_t count, uint8_t *buf);
 int dir_write();
 int dir_close();
 
+/* helpful functions */
+int write_dec_to_char(int num, uint8_t *buf);
+
 #endif
