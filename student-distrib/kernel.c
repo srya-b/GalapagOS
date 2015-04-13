@@ -13,7 +13,7 @@
 #include "terminal.h"
 #include "file_system.h"
 #include "file_array.h"
-#include "sys_calls.h"
+//#include "sys_calls.h"
 #define SUCCESS 0
 #define MAX_TEST_FREQUENCY 1096
 #define SPACE 0x20
