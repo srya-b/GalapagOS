@@ -12,7 +12,8 @@
 #include "assembly_linkage.h"
 #include "terminal.h"
 #include "file_system.h"
-#define ERROR -1
+#include "file_array.h"
+#include "sys_calls.h"
 #define SUCCESS 0
 #define MAX_TEST_FREQUENCY 1096
 #define SPACE 0x20
@@ -205,14 +206,18 @@ entry (unsigned long magic, unsigned long addr)
 		idt[16] = the_idt_desc;
 		SET_IDT_ENTRY(the_idt_desc, machine_check_linkage);
 		idt[17] = the_idt_desc;
-		SET_IDT_ENTRY(the_idt_desc, SIMD_floating_point_linkage);
-		idt[18] = the_idt_desc;
+		
 
 		the_idt_desc.reserved3 = 0;
 		SET_IDT_ENTRY(the_idt_desc, keyboard_int_linkage);
 		idt[33] = the_idt_desc;
 		SET_IDT_ENTRY(the_idt_desc, rtc_int_linkage);
 		idt[40] = the_idt_desc;
+
+		the_idt_desc.reserved3 = 1;
+		the_idt_desc.dpl = 3;		
+		SET_IDT_ENTRY(the_idt_desc, system_call_linkage);
+		idt[128] = the_idt_desc;
 	}
 
 	/* Init the IDTR */
@@ -240,89 +245,19 @@ entry (unsigned long magic, unsigned long addr)
 	enable_irq(RTC_INT);
 	
 	/*Initialize paging*/
-	paging_init();
-	
+	// paging_init();
+	new_init();	
 	terminal_open();
-	
+
+	// save pcb for idle process
 	sti();
 
-	update_cursor(0,0);
+ //	update_cursor(0,0);
 	fs_init(fs_address);
-
-	/* Print contents of a file by file-name */
+	//init_process();
 	clear_terminal();
-	uint8_t bro[5000];
-	const char * file_name = "grep";
-	int r = fs_read((uint8_t*)file_name, 0,0, (uint8_t*)(&bro));
-	clear_terminal();
-	terminal_write(r, (uint8_t*)(&bro));
 
-	/* Print files in file system */
-	clear_terminal();
-	uint8_t read_num = 33; // So that we can also read the file size (and write it to the screen in a meaningful way)
-	int num_read = dir_read(read_num, (uint8_t*)(&bro));
-	terminal_write(num_read, (uint8_t*)(&bro));
-	terminal_write(1, (uint8_t*)"\n");
-	while (0 != num_read) {
-		num_read = dir_read(read_num, (uint8_t*)(&bro)); 
-		terminal_write(num_read, (uint8_t*)(&bro));
-		terminal_write(1, (uint8_t*)"\n");
-	}
-
-	/* Execute the first program (`shell') ... */
-	uint8_t tru[128];
-	while (1) {
-		int ret = terminal_read(128,(uint8_t*)(&tru));
-		terminal_write(ret, (uint8_t*)(&tru));
-	}
-
-	clear_terminal();	
-	/* Demonstrate rtc works with rtc_read and rtc_write */
-
-	// uint32_t frequency = 0;
-	// while (1) {
-	// 	uint8_t * wait = (uint8_t*) "0, wait for flag to be set\n";
-	// 	terminal_write(strlen( (int8_t*)wait ), wait);
-
-	// 	uint8_t * set = (uint8_t*) "1, FLAG SET\n";
-	// 	if (rtc_read() == 0) terminal_write(strlen( (int8_t*)set ), set);
-
-	// 	rtc_write(frequency);
-	// 	frequency = (frequency + 1) % 1024;
-	// }
-	uint32_t frequency = 0;
-	while (1) {
-		uint8_t * wait = (uint8_t*) "rtc flag is 0\n";
-		terminal_write(strlen( (int8_t*)wait ), wait);
-
-		uint8_t * set = (uint8_t*) "rtc flag is 1\n";
-		if (rtc_read() == SUCCESS) terminal_write(strlen( (int8_t*)set ), set);
-
- 	// // UNCOMMENT TO SELECTIVELY TEST FREQUENCIES
-	// 	uint32_t your_frequency = 0;
-	// 	uint8_t * write_test = (uint8_t*) "SUCCESSFUL WRITE\n";
-	// 	if (rtc_write(your) == SUCCESS) terminal_write( strlen( (int8_t*)balls), balls);
-	// // COMMENT BOTTOM UNTIL "frequency = ..." FOR SELECTIVE TEST
-
-		uint8_t * attempt_frequency;
-		if (rtc_write(frequency) == ERROR) {
-			attempt_frequency = (uint8_t*) "DID_NOT_WRITE ";
-			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
-			attempt_frequency = (uint8_t*) "    \n";
-			write_dec_to_char(frequency, attempt_frequency);
-			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
-			attempt_frequency[0]=attempt_frequency[1]=attempt_frequency[2]=attempt_frequency[3]=(uint8_t)SPACE;
-		} else {
-			attempt_frequency = (uint8_t *)"GOOD_WRITE, POWER OF 2 FOUND! ";
-			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
-			attempt_frequency = (uint8_t*) "    \n";
-			write_dec_to_char(frequency, attempt_frequency);
-			terminal_write(strlen( (int8_t*) attempt_frequency), attempt_frequency);
-			attempt_frequency[0]=attempt_frequency[1]=attempt_frequency[2]=attempt_frequency[3]=(uint8_t)SPACE;
-		}
-		frequency = (frequency + 1) % MAX_TEST_FREQUENCY;
-	}
-
+	kexecute((uint8_t*)"shell");
 
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");

@@ -6,6 +6,7 @@
 #include "types.h"
 #include "lib.h"
 #include "int_handlers.h"
+#include "file_array.h"
 
 
 extern void divide_by_zero_linkage();
@@ -29,6 +30,9 @@ extern void machine_check_linkage();
 extern void SIMD_floating_point_linkage();
 extern void keyboard_int_linkage();
 extern void rtc_int_linkage();
+extern void system_call_linkage();
+extern void* halt_return;
+
 
 #endif
 #endif

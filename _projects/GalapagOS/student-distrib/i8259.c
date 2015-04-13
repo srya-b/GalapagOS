@@ -11,7 +11,7 @@ uint8_t master_mask; /* IRQs 0-7 */
 uint8_t slave_mask; /* IRQs 8-15 */
 
 #define MASK_ALL 0xFF
-
+#define SLAVE_LINE 0x2
 /*
  *	i8259_init
  *		DESCRIPTION:  Turns on the PIC and enables recieving of 
@@ -132,7 +132,7 @@ send_eoi(uint32_t irq_num)
      	outb(EOI | (unsigned char)(irq_num % NUM_IRQ_LINES), SLAVE_8259_PORT);		
     	
      	/*Send eoi to disable the slave port on the master*/
-    	outb(EOI | (unsigned char)(0x2), MASTER_8259_PORT);
+    	outb(EOI | (unsigned char)(SLAVE_LINE), MASTER_8259_PORT);
     }
 
     /* Send to master no matter what */

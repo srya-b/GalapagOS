@@ -10,6 +10,9 @@
 #define PROTECTED_MASK 0x00000001
 #define PAGE_MASK 0x80000000
 #define PSE_MASK 0x00000010
+#define NUM_TASKS 7
+#define ERROR (-1)
+#define KB4 4096
 
 /* Defines 32 bit packed struct representing table entries for 4kB pages */
 typedef struct page_table_entry {
@@ -58,8 +61,24 @@ typedef struct page_dir_entry_big {
             uint32_t table_base : 10;
 } __attribute__((packed)) page_dir_entry_big_t;
 
+typedef struct page_directory {
+
+    uint32_t directory[NUM_ENT] __attribute__((aligned (KB4)));
+
+} __attribute__((packed)) page_directory_t;
+
+typedef struct page_table {
+
+    uint32_t table[NUM_ENT] __attribute__((aligned(KB4)));
+
+} __attribute__((packed)) page_table_t;
+
 /* Intialize paging */
 void paging_init(void);
+void new_init(void);
+int paging_init_per_processor(uint32_t pid);
+page_dir_entry_big_t * pid_to_dir_entry(int pid);
+int switch_paging(uint32_t pid);
 
 /* Set PG bit in CR0 */
 #define page_enable(void)           \

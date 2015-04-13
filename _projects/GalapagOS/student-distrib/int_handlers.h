@@ -58,5 +58,14 @@
 
  void rtc_int();
 
+#define call_halt(void)             \
+do {                                \
+    asm volatile(                   \
+        "movl $0, %%eax;           \
+        int $0x80;"					\
+         );                         \
+} while(0)
+
+
 #endif
 #endif

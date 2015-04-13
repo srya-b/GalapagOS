@@ -1,11 +1,34 @@
 #include "int_handlers.h"
 #include "rtc.h"
 #include "terminal.h"
+#include "file_array.h"
+
 #define LSHIFT 0x2a
 #define RSHIFT 0x36
 #define LCTRL 0x1d
 #define RCTRL 0x1d
 #define CAPS 0x3a
+#define RELEASE 0x80
+#define EHALT 0xEF
+#define DIVTXT 15
+#define DEBTXT 15
+#define NMITXT 23
+#define BRTXT 11
+#define OVTXT 9
+#define BNDTXT 14
+#define IOPTXT 15
+#define COPTXT 22
+#define DBFTXT 13
+#define COSTXT 20
+#define TSSTXT 12
+#define SNPTXT 20
+#define SSFTXT 20
+#define GPFTXT 25
+#define PGFTXT 11
+#define FLPTXT 15
+#define ALCTXT 16
+#define MCNTXT 14
+#define SIMTXT 20
 
 static unsigned char kbdus[4][128] =
 {{
@@ -68,10 +91,11 @@ volatile uint8_t rtc_flag = 0;
  */
 
 void divide_by_zero() { 
-	clear();
-	printf("Divide-by-zero exception!\n");
-	cli();
-	while(1) { }
+	//clear();
+	//printf("Divide-by-zero exception!\n");
+	terminal_write(DIVTXT, (uint8_t*)"Divide-by-zero\n");
+	khalt(EHALT);
+	//while(1) { }
 }
 
 /* 
@@ -83,10 +107,12 @@ void divide_by_zero() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void debugger() {
-	clear();
-	printf("Debugger exception!\n");
-	cli();
-	while(1) { }
+	//clear();
+	//printf("Debugger exception!\n");
+	terminal_write(DEBTXT, (uint8_t*)"Debugger error\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -98,10 +124,12 @@ void debugger() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void NMI() {
-	clear(); 
-	printf("Non-Maskable Interrupt!\n");
-	cli();
-	while(1) { }
+	//clear(); 
+	//printf("Non-Maskable Interrupt!\n");
+	terminal_write(NMITXT, (uint8_t*)"Non-Maskable Interrupt\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -113,10 +141,12 @@ void NMI() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void breakpoint() { 
-	clear();
-	printf("Breakpoint!\n");
-	cli();
-	while(1) { }
+	//clear();
+	//printf("Breakpoint!\n");
+	terminal_write(BRTXT, (uint8_t*)"Breakpoint\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -128,10 +158,12 @@ void breakpoint() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void overflow() { 
-	clear();
-	printf("Overflow!\n");
-	cli();
-	while(1) { }
+	//clear();
+	//printf("Overflow!\n");
+	terminal_write(OVTXT, (uint8_t*)"Overflow\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -143,10 +175,12 @@ void overflow() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void bounds() { 
-	clear();
-	printf("Out of bounds!\n");
-	cli();
-	while(1) { }
+	//clear();
+	//printf("Out of bounds!\n");
+	terminal_write(BNDTXT, (uint8_t*)"Out of bounds\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -158,10 +192,12 @@ void bounds() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void invalid_opcode() { 
-	clear();
-	printf("Invalid opcode!\n");
-	cli();
-	while(1) { }
+	//clear();
+	//printf("Invalid opcode!\n");
+	terminal_write(IOPTXT, (uint8_t*)"Invalid opcode\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -173,10 +209,12 @@ void invalid_opcode() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void coprocessor() { 
-	clear();
-	printf("Coprocessor exception!\n");
-	cli();
-	while(1) { }
+	//clear();
+	//printf("Coprocessor exception!\n");
+	terminal_write(COPTXT, (uint8_t*)"Coprocessor exception\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* double_fault
@@ -187,10 +225,12 @@ void coprocessor() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void double_fault() { 
-	clear();
-	printf("Double fault!\n");
-	cli();
-	while(1) { }
+	terminal_write(DBFTXT, (uint8_t*)"Double Fault\n");
+	khalt(EHALT);
+	//clear();
+	//printf("Double fault!\n");
+	//cli();
+	//while(1) { }
 }
 
 /* 
@@ -202,10 +242,12 @@ void double_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void coprocessor_segment() { 
-	clear();
-	printf("Coprocessor segment exception!\n");
-	cli();
-	while(1) { }
+	terminal_write(COSTXT, (uint8_t*)"Coprocessor Segment\n");
+	khalt(EHALT);
+	// clear();
+	// printf("Coprocessor segment exception!\n");
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -217,10 +259,12 @@ void coprocessor_segment() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void invalid_tss() { 
-	clear();
-	printf("Invalid TSS!\n");
-	cli();
-	while(1) { }
+	terminal_write(TSSTXT, (uint8_t*)"Invalid TSS\n");
+	khalt(EHALT);
+	// clear();
+	// printf("Invalid TSS!\n");
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -232,10 +276,12 @@ void invalid_tss() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void segment_not_present() { 
-	clear();
-	printf("Segment not present!\n");
-	cli();
-	while(1) { }
+	terminal_write(SNPTXT, (uint8_t*)"Segment not present\n");
+	khalt(EHALT);
+	// clear();
+	// printf("Segment not present!\n");
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -247,10 +293,12 @@ void segment_not_present() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void stack_segment_fault() { 
-	clear();
-	printf("Stack segment fault!\n");
-	cli();
-	while(1) { }
+	terminal_write(SSFTXT, (uint8_t*)"Stack Segment Fault\n");
+	khalt(EHALT);
+	// clear();
+	// printf("Stack segment fault!\n");
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -262,10 +310,12 @@ void stack_segment_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void general_protection_fault() {
-	clear();
-	printf("General protection fault!\n");
-	cli();
-	while(1) { }
+	terminal_write(GPFTXT, (uint8_t*)"General Protection Fault\n");
+	khalt(EHALT);
+	// clear();
+	// printf("General protection fault!\n");
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -277,10 +327,15 @@ void general_protection_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void page_fault() {
-	clear();
-	printf("Page fault!\n");
-	cli();
-	while(1) { }
+	//clear();
+	// int cr2;
+	// asm ("movl %%cr2,%0"
+	// 	:"=r"(cr2) : );
+	// printf("Page fault! %x\n", cr2);
+	terminal_write(PGFTXT, (uint8_t*)"Page Fault\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -292,10 +347,12 @@ void page_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void floating_point() {
-	clear();
-	printf("Floating point exception!\n");
-	cli();
-	while(1) { }
+	// clear();
+	// printf("Floating point exception!\n");
+	terminal_write(FLPTXT, (uint8_t*)"Floating point\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -307,10 +364,12 @@ void floating_point() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void alignment_check() {
-	clear();
-	printf("Alignment check exception!\n");
-	cli();
-	while(1) { }
+	// clear();
+	// printf("Alignment check exception!\n");
+	terminal_write(ALCTXT, (uint8_t*)"Alignment check\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -322,10 +381,12 @@ void alignment_check() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void machine_check() {
-	clear();
-	printf("Machine check exception!\n");
-	cli();
-	while(1) { }
+	// clear();
+	// printf("Machine check exception!\n");
+	terminal_write(MCNTXT, (uint8_t*)"Machine Check\n");
+	khalt(EHALT);
+	// cli();
+	// while(1) { }
 }
 
 /* 
@@ -337,10 +398,12 @@ void machine_check() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void SIMD_floating_point() {
-	clear();
-	printf("SIMD floating point exception!\n");
-	cli();
-	while(1) { }
+	terminal_write(SIMTXT, (uint8_t*)"SIMD Floating Point\n");
+	khalt(EHALT);
+	// clear();
+	// printf("SIMD floating point exception!\n");
+	// cli();
+	// while(1) { }
 }
 
 /****************** INTERRUPTS ******************/
@@ -358,11 +421,11 @@ void keyboard_int() {
 		int key_scancode = inb(KEYBOARD_PORT);
 		if (key_scancode == LSHIFT || key_scancode == RSHIFT)
 			shift = 1;
-		else if (key_scancode == (LSHIFT + 0x80) || key_scancode == (RSHIFT + 0x80))
+		else if (key_scancode == (LSHIFT + RELEASE) || key_scancode == (RSHIFT + RELEASE))
 			shift = 0;
 		else if (key_scancode == LCTRL)
 			ctrl = 1;
-		else if (key_scancode == (LCTRL + 0x80))
+		else if (key_scancode == (LCTRL + RELEASE))
 			ctrl = 0;
 		else if (key_scancode == CAPS && caps_lock == 0)
 			caps_lock = 1;
