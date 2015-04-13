@@ -1,13 +1,18 @@
 #define ASM 1
+#define MAX_SYS_CALL 10
+#define MIN_SYS_CALL 1
 #include "assembly_linkage.h"
+#include "x86_desc.h"
 
 .text
 .globl divide_by_zero_linkage, debugger_linkage, NMI_linkage, breakpoint_linkage, overflow_linkage, bounds_linkage, invalid_opcode_linkage
 .globl coprocessor_linkage, double_fault_linkage, coprocessor_segment_linkage, invalid_tss_linkage, segment_not_present_linkage, stack_segment_fault_linkage
 .globl general_protection_fault_linkage, page_fault_linkage, floating_point_linkage, alignment_check_linkage, machine_check_linkage, SIMD_floating_point_linkage
-.globl keyboard_int_linkage, rtc_int_linkage
+.globl keyboard_int_linkage, rtc_int_linkage, system_call_linkage
+.globl halt_return
+retval:
+	.long 
 
- 
  # divide_by_zero_linkage
  #   DESCRIPTION: divide by zero exception assembly linkage, pushes flags and registers before
  #					calling divide by zero expection handler, then pops flags and registers after handler
@@ -234,14 +239,14 @@ SIMD_floating_point_linkage:
 	iret
 
 keyboard_int_linkage: 
-	pushl 	%ebp
-	movl	%esp, %ebp
+	# pushl 	%ebp
+	# movl	%esp, %ebp
 	pushfl
 	pushal
 	call 	keyboard_int
 	popal
 	popfl
-	leave
+	# leave
 	iret
 
 rtc_int_linkage:
@@ -254,3 +259,57 @@ rtc_int_linkage:
 	popfl
 	leave
 	iret
+
+
+sys_call_table:
+  .long 0
+  .long khalt
+  .long kexecute
+  .long kread
+  .long kwrite
+  .long kopen
+  .long kclose
+  .long kget_args
+  .long kvidmap
+  .long kset_handler
+  .long ksigreturn
+
+
+system_call_linkage:
+  
+  pushfl
+  pushal
+
+#  cmpl $1,%eax              #EAX holds system call number
+  cmpl $MIN_SYS_CALL,%eax              #EAX holds system call number
+  jl invalid_syscall_num    #check if between 1 to 10
+#  cmpl $10,%eax
+  cmpl $MAX_SYS_CALL,%eax
+  jg invalid_syscall_num
+  
+  pushl %edx                #third param
+  pushl %ecx                #second param
+  pushl %ebx                #first param
+
+  movw    $KERNEL_DS, %cx
+  movw    %cx, %ds 
+
+  call *sys_call_table(,%eax,4)
+ 
+  addl $12,%esp
+  movl %eax, retval
+  popal
+  movl retval, %eax
+  popfl
+  iret
+
+halt_return:
+  	leave
+	ret
+
+invalid_syscall_num:
+  movl $-1,%eax             
+  popal
+  popfl
+  iret
+

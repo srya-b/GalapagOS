@@ -12,6 +12,12 @@
 #define DELETE 0x7f
 #define NEW_LINE 0xa
 #define BUFFER_LIMIT 128
+#define CURSOR_LOCATION_HIGH 0x0E
+#define CURSOR_LOCATION_LOW 0x0F
+#define VGA_ADDRESS_REGISTER 0x3D4
+#define VGA_DATA_REGISTER 0x3D5
+#define BYTE_SHIFT 8
+#define LOW_BYTE_MASK 0xFF
 
 static int x;
 static int y;
@@ -22,7 +28,7 @@ static int last_line_length;
 static int line_start;
 static uint8_t line_buffer[BUFFER_LIMIT+1];
 static uint8_t last_line_buffer[BUFFER_LIMIT+1];
-static int read;
+static volatile int read;
 
 
 /***************************************/
@@ -77,9 +83,10 @@ void put_char(char c)
 			data->character = c;
 			data->fore = WHITE;
 			data->back = BLACK;
-			update_cursor(y, x);
 			x++;
 			line_length++;
+			update_cursor(y, x);
+
 		} 
 	}
 		if (c == BACKSPACE) {
@@ -92,6 +99,8 @@ void put_char(char c)
 		}
 	
 	if (c == '\n' ) {
+		line_buffer[line_length] = c;
+		line_length++;
 		last_line_length = line_length;
 		line_length = 0;
 		line_start = 0;
@@ -125,6 +134,7 @@ void put_char_out(char c)
 		x = 0;
 		y++;
 		update_cursor(y, x);
+		read = 1;
 	}
 
 	if (c == '\n' ) {
@@ -157,6 +167,7 @@ int terminal_write(int count, uint8_t *buf)
 {
 	int i;
 	int written;
+	
 	if (buf == NULL || count < 0) return -1;
 
 	written = 0;
@@ -182,9 +193,11 @@ int terminal_read(int count, uint8_t *buf)
 {
 	int ret;
 	int i;
-	if (buf == NULL || count < 0 || count > 128) return -1;
+	if (buf == NULL || count < 0 ) return -1;
 
-	while (read == 0) { }
+	while (1) {
+		if (read == 1) break;
+	}
 	
 	ret = 0;
 	for (i = 0; i < last_line_length && i < count && last_line_buffer[i] != '\0'; i++)
@@ -253,14 +266,21 @@ int terminal_open()
 
 	return 0;
 }
+
+int terminal_close()
+{
+	line_length = last_line_length = line_start = read = x = y = 0;
+	return 0;
+}
+
 void update_cursor(int row, int col)
 {
 	/* from OSDev */
-	unsigned short position=(row*80)+col;
+	unsigned short position = (row * WIDTH) + col;
 
-	outb(0x0F,0x3D4);
-	outb((unsigned char)(position&0xFF),0x3D5);
+	outb(CURSOR_LOCATION_LOW, VGA_ADDRESS_REGISTER);
+	outb((unsigned char)(position & LOW_BYTE_MASK), VGA_DATA_REGISTER);
 
-	outb(0x0E,0x3D4);
-	outb((unsigned char)((position>>8)&0xFF), 0x3D5);
+	outb(CURSOR_LOCATION_HIGH, VGA_ADDRESS_REGISTER);
+	outb((unsigned char)((position >> BYTE_SHIFT) & LOW_BYTE_MASK), VGA_DATA_REGISTER);
 }	
