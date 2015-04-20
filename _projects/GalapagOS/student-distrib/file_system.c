@@ -104,9 +104,7 @@ int32_t read_data(inode_t* inode, uint32_t offset, uint8_t* buf, uint32_t length
 	inode_t* i_ptr = inode;
 	data_block_t *d_ptr;
 
-//	i_ptr = (inode_t*)(inodes + (inode * INODE_SIZE()));
-
-	if (buf == NULL || /*inode > (NUM_INODES()-1) || inode < 0*/ inode == NULL
+	if (buf == NULL || inode == NULL
 		|| length < 0 || offset < 0 || i_ptr == NULL)
 	if (offset > i_ptr->length) return 0;
   
@@ -173,11 +171,9 @@ int fs_read_by_name(uint8_t *fname, int offset, int count, uint8_t * buf)
 	return read_data(i_ptr, offset, buf, count);
 }
 
-//int fs_read(uint8_t *fname, int offset, int count, uint8_t * buf)
 int fs_read(inode_t* ptr, int offset, int count, uint8_t * buf)
 {
 	dentry_t d;
-//	file_descriptor_t* fdptr = (file_descriptor_t*)ptr;
 	uint8_t* fname = (uint8_t*) return_dentry_by_ptr(ptr);
 	int ret = read_dentry_by_name(fname, &d);
 	if (ret == ERROR) return ERROR;
@@ -185,9 +181,7 @@ int fs_read(inode_t* ptr, int offset, int count, uint8_t * buf)
 	inode_t* i_ptr = (inode_t*)(inodes + (d.inode_num * INODE_SIZE()));
 
 	ret = read_data(i_ptr, offset, buf, count);
-//	desc[fd].file_position += ret;
 	increment_position(ptr, ret);
-//	return read_data(i_ptr, offset, buf, count);
 	return ret;
 }
 
@@ -197,7 +191,6 @@ int fs_close() { return 0; }
 int dir_open() { 
 	return 0; 
 }
-//int dir_read(uint32_t count, uint8_t *buf)
 int dir_read(inode_t* p, int offset, int count, uint8_t * buf)
 {
 	int j;
@@ -248,10 +241,9 @@ int dir_read(inode_t* p, int offset, int count, uint8_t * buf)
 		buf++;
 		read += 2;
 	}
-	// *buf = '\n';
-	// read++;
+
 	curr_file_number++;
-	//if(curr_file_number == NUM_DIR_ENTRIES()) curr_file_number = 0;
+
 	return read;
 }
 
