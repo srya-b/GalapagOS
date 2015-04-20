@@ -99,8 +99,6 @@ void new_init(void)
 	   	table_entry->base_31_12 = (VID_MEM >> PAGE_BITS) & BIG_MASK;
 	}
 	page_enable(void);
-	// printf("%x\n", process_directories[1].directory[(0xdeadb000 >> 22) & 0x3ff]);
-	// printf("%x\n", vid_tables[1].table[(0xdeadb000 >> 12) & 0x3ff]);
 }
 
 
@@ -161,7 +159,6 @@ void paging_init(void) {
 	k_entry->read_write = 1;
 	k_entry->present = 1;
 
-//	page_enable(void);
 }
 
 int paging_init_per_process(uint32_t pid) {
@@ -181,11 +178,6 @@ int paging_init_per_process(uint32_t pid) {
 int switch_paging(uint32_t pid) {
 	uint32_t* pd = &(process_directories[pid].directory[0]);
 	if (pd == NULL) return ERROR;
-
-	// page_dir_entry_small_t* ps = (page_dir_entry_small_t*)(&(process_directories[pid].directory[VIRT_VIDMEM_DIR_ENTRY]));
-	// ps->present = 1;
-	// page_table_entry_t* pt = (page_table_entry_t*)(&(vid_table[VIRT_VIDMEM_TABLE_ENTRY]));
-	// pt->present = 1;
 	set_cr3(pd);
 	return 0;
 }
@@ -236,14 +228,9 @@ int map_vid_memory(int pid)
 	if (pid < 0) return ERROR;
 
 	page_dir_entry_small_t* d = (page_dir_entry_small_t*)(&(process_directories[pid].directory[VIRT_VIDMEM_DIR_ENTRY]));
-	//if (d->present == 1) return ERROR;
 	page_table_entry_t* pt = (page_table_entry_t*)(&(vid_tables[pid].table[VIRT_VIDMEM_TABLE_ENTRY]));
 	pt->present = 1;	
 	d->present = 1;
-	// printf("asdasd\n");
-	// printf("%d\n", pid);
-	// printf("%x\n", *d);
-	// printf("%x\n", *pt);
 	set_cr3((uint32_t*)(&(process_directories[pid].directory[0])));
 	return 0;
 }

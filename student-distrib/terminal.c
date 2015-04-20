@@ -30,6 +30,7 @@ static uint8_t line_buffer[BUFFER_LIMIT+1];
 static uint8_t last_line_buffer[BUFFER_LIMIT+1];
 static volatile int read;
 
+#define TABSIZE 8
 
 /***************************************/
 /* LOCK FOR READ AND WRITE!!!!!!!!!!!! */
@@ -64,8 +65,8 @@ void put_char(char c)
 		if (c == '\t') 
 		{
 			int i;
-		 	x += 8;
-		 	for (i = 0; i < 8; i++)
+		 	x += TABSIZE;
+		 	for (i = 0; i < TABSIZE; i++)
 		 	{
 		 		line_buffer[line_length] = ' ';
 		 		line_length++;

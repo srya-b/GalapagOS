@@ -44,14 +44,12 @@ typedef struct data_block {
 int32_t fs_init(uint32_t fs_address);
 int fs_open();
 int fs_read_by_name(uint8_t *fname, int offset, int count, uint8_t * buf);
-//int fs_read(uint8_t *fname, int offset, int count, uint8_t * buf);
 int fs_read(inode_t* ptr, int offset, int count, uint8_t * buf);
 // does not change fd array
 int fs_write(int32_t fd, void* buf, int32_t nbytes);
 int fs_close();
 
 int dir_open();
-//int dir_read(uint32_t count, uint8_t *buf);
 int dir_read(inode_t* p, int offset, int count, uint8_t * buf);
 int dir_write(int32_t fd, void* buf, int32_t nbytes);
 int dir_close();
@@ -63,9 +61,4 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry);
 int32_t read_data(inode_t * inode, uint32_t offset, uint8_t* buf, uint32_t length);
 unsigned char * return_dentry_by_ptr(inode_t *inode);
 inode_t* get_inode_ptr(int inode_num);
-// extern void *file_system;
-// extern boot_block_t *boot_block;
-// extern void *inodes;
-// extern void *data;
-// extern int curr_file_number;
 #endif
