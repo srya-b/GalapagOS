@@ -73,12 +73,22 @@ typedef struct page_table {
 
 } __attribute__((packed)) page_table_t;
 
+typedef struct vid_mem_table {
+
+    uint32_t table[NUM_ENT] __attribute__((aligned(KB4)));
+
+} __attribute__((packed)) vid_mem_table_t;
+
 /* Intialize paging */
 void paging_init(void);
 void new_init(void);
 int paging_init_per_processor(uint32_t pid);
 page_dir_entry_big_t * pid_to_dir_entry(int pid);
 int switch_paging(uint32_t pid);
+int address_mapped(int32_t vaddr, int pid);
+int address_in_user(int32_t vaddr, int pid);
+int map_vid_memory(int pid);
+int unmap_vid_memory(int pid);
 
 /* Set PG bit in CR0 */
 #define page_enable(void)           \

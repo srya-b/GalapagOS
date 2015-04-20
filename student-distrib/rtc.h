@@ -15,10 +15,12 @@
 int rtc_open();
 
 /* wait until next rtc interrupt */
-int rtc_read();
+//int rtc_read();
+int rtc_read(uint32_t* ptr, int offset, int count, uint8_t * buf);
 
 /* write a new frequency to the rtc */
-int rtc_write(uint32_t frequency);
+//int rtc_write(uint32_t frequency);
+int rtc_write(int32_t fd, const void* buf, int32_t nbytes);
 
 /* closes the rtc */
 int rtc_close();

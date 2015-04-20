@@ -39,7 +39,7 @@ void scroll_line()
 	unsigned short int character;
 	screen_char_t *ptr = (screen_char_t*)(&character);
 	ptr->character = ' ';
-	ptr->fore = BLACK;
+	ptr->fore = WHITE;
 	ptr->back = BLACK;
 
 	int i = y - HEIGHT + 1;
@@ -134,7 +134,7 @@ void put_char_out(char c)
 		x = 0;
 		y++;
 		update_cursor(y, x);
-		read = 1;
+		// read = 1;
 	}
 
 	if (c == '\n' ) {
@@ -163,15 +163,16 @@ void put_char_out(char c)
 	}	
 }
 
-int terminal_write(int count, uint8_t *buf)
+//int terminal_write(int count, uint8_t *buf);
+int terminal_write(int32_t fd, const void* new_buf, int32_t count)
 {
 	int i;
 	int written;
+	uint8_t* buf = (uint8_t*)(new_buf);
 	
 	if (buf == NULL || count < 0) return -1;
 
 	written = 0;
-	
 	/* terminal write outputs to 128 character buffer in case of keyboard 
 	but can **ALSO** write to larger buffers in the case of file reads: limiting a terminal
 	write involving a file to 128 char buffers prevents a full file buffer from printing  */
@@ -181,15 +182,18 @@ int terminal_write(int count, uint8_t *buf)
 					want index out of bounds exceptions when dealing with the keyboard! */
 	for (i = 0; i < count; i++)
 	{
-		put_char_out(buf[i]);
-		written++;
+		if (buf[i] != '\0') {
+			put_char_out(buf[i]);
+			written++;
+		}
 	}
 	
 	line_length = 0;
 	return written;
 }
 
-int terminal_read(int count, uint8_t *buf)
+//int terminal_read(int count, uint8_t *buf)
+int terminal_read(uint32_t* ptr, int offset, int count, uint8_t * buf)
 {
 	int ret;
 	int i;
@@ -231,8 +235,8 @@ void clear_terminal()
 	{
 		for (srcy = 0; srcy < HEIGHT; srcy++)
 		{
-			t->character = ASCII_SPACE;
-			t->fore = BLACK;
+			t->character = ' ';
+			t->fore = WHITE;
 			t->back = BLACK;
 			t++;
 		}

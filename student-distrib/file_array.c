@@ -3,8 +3,7 @@
 #include "rtc.h"
 #include "terminal.h"
 #include "paging.h"
-//#include "assembly_linkage.h"
-//#define ERROR -1
+
 #define FD_IN_USE 0x00000100
 #define FD_FREE 0
 #define SUCCESS 0
@@ -25,7 +24,7 @@
 #define USTACK_START 0x83ffffc
 #define PROGRAM_SIZE 0x400000
 #define STACK_SIZE 0x2000
-#define PID_ARR_SIZE 7
+#define PID_ARR_SIZE 2
 #define DEL 0x7f
 #define UCSELECTOR 0x18
 #define UDSELECTOR 0x20
@@ -35,6 +34,8 @@
 #define STATUS_MASK 0x000000ff
 #define EHALT 239
 #define EXCEPTION_RETURN 256
+#define VIRT_VID_MEM 0xdeadb000
+
 
 static pcb_t* curr_process;
 static file_descriptor_t* desc;
@@ -83,7 +84,7 @@ int check_executable(unsigned char * file_name)
 {
 	char elfbuf[4];
 	char ELF[] = {DEL, 'E', 'L', 'F'};
-   	int32_t ret = fs_read((uint8_t*)(file_name), 0, 4, (uint8_t*)elfbuf);
+   	int32_t ret = fs_read_by_name((uint8_t*)(file_name), 0, 4, (uint8_t*)elfbuf);
    	if ( ret == ERROR || ret < 4 ) return ERROR;
 
   	if(strncmp(elfbuf, ELF, 4) != 0) return ERROR;
@@ -136,24 +137,36 @@ int32_t open_stdin_stdout()
 	return 0;
 }
 
-int32_t kexecute(const uint8_t* command) {
-  /*
-      1. Parse the command into "command" + "args"
-      2. Check file exists and ELF at start of file
-      3. Add entry page table
-      4. File loader to put contents of executable file into user space (thru virtual address)
-         Get EIP from 24-27 bytes within the file
-      5.  PCB - [kernel space] Create new file descriptor array, open stdin and stdout, record parent process info
-      6.  Context Switching - Switch from kernel space to user prorg
-  */
+int32_t kget_args(uint8_t* buf, int32_t nbytes){
+	if(buf == NULL || nbytes < 0 || curr_process->args == NULL)
+		return ERROR; 
+
 	int i;
+	for(i = 0; i < strlen(curr_process->args); i++){
+		buf[i] = curr_process->args[i];
+	}
+
+	buf[strlen(curr_process->args)] = '\0';
+
+	return SUCCESS;
+}
+
+int32_t kset_handler(int32_t signum, void* handler_address){
+	return ERROR;
+}
+
+int32_t ksigreturn(void){
+	return ERROR;
+}
+
+int32_t kexecute(const uint8_t* command) {
+ 	int i;
 	int no_args;
   	/* get next available pid */
 
 	int pid = free_pid_idx();
 
 	if(command == NULL || pid == ERROR) return ERROR;
-	//pid_arr[pid] = 1;
 
 	/* parse the command */
 	for (i = 0; i < CMD_LENGTH; i++) {    //Find length of the command
@@ -180,13 +193,20 @@ int32_t kexecute(const uint8_t* command) {
   	
 	 // increment i to first arg character in buffer, create new buffer
 	while (command[i] == ' ') i++;
+	if(command[i] != '\0') no_args = 0;
+
 	char args[CMD_LENGTH-i];
   	if (no_args == 0)
   	{
 		//copy the args with spaces into its own buffer
 		int j;
-		for (j = 0; j < CMD_LENGTH - i; j++)
+		for (j = 0; j < CMD_LENGTH - i; j++) {
+			if(command[i+j] == '\0' || command[i+j] == '\n') {
+				args[j] = '\0';
+				break;
+			}
 			args[j] = command[i+j];
+		}
 	}
 
 	switch_paging(pid);
@@ -194,7 +214,10 @@ int32_t kexecute(const uint8_t* command) {
 	/* Copy the executable file info into memory */
 	inode_t* i_ptr = get_inode_ptr(data.inode_num);
 	int ret = read_data(i_ptr, 0, (uint8_t*) (PROGRAM_DIR_START + PROGRAM_OFFSET), i_ptr->length);
-	if (ret == ERROR || ret < 1) return ERROR;
+	if (ret == ERROR || ret < i_ptr->length) {
+		printf("%d\n", ret);
+		return ERROR;
+	}
 
 	pid_arr[pid] = 1;
 	//Extract EIP from the file
@@ -204,7 +227,6 @@ int32_t kexecute(const uint8_t* command) {
 	pcb_t* ctrl_blk = get_pcb_address(pid);
     pcb_init(ctrl_blk, pid, eip, cmd, args);
 
-    //sti();
     set_current_process(ctrl_blk);
     open_stdin_stdout();
 
@@ -226,7 +248,7 @@ int32_t khalt(uint8_t status)
 		pcb_t* parent_pcb;
 		parent_pcb = curr_process->parent;
 		pid_arr[curr_process->pid] = 0;
-
+		unmap_vid_memory(curr_process->pid);
 		/* grab parent ebp */
 		int parent_ebp = parent_pcb->ebp;
 
@@ -289,8 +311,7 @@ int32_t fd_init(dentry_t data, uint32_t chosen_index){
 }
 
 int32_t kopen(const uint8_t* file_name) {
-	//sti();
-	// are there any available file descriptors?
+	if (file_name == NULL || strlen((char*)file_name) == 0) return ERROR;
 	uint32_t chosen_index = ERROR;
 	int i;
 	for (i = FD_START; i < FILE_ARRAY_SIZE; i++) {
@@ -316,59 +337,28 @@ int32_t kopen(const uint8_t* file_name) {
 }
 
 int32_t kread(int32_t fd, void* buf, int32_t nbytes){
-	//sti();
-	if(fd < 0 || fd >= FILE_ARRAY_SIZE || buf == NULL || nbytes < 0){
+	if(fd < 0 || fd >= FILE_ARRAY_SIZE || buf == NULL || nbytes < 0 || !(desc[fd].flags & FD_IN_USE) ||
+		((desc[fd].flags & FILE_TYPE) != RTC && (desc[fd].flags & FILE_TYPE) !=DIRECTORY && 
+		(desc[fd].flags & FILE_TYPE) != REGULAR_FILE && (desc[fd].flags & FILE_TYPE) != STDIN)){
 		return ERROR;
 	}
-	unsigned char * name;
-	int ret;
-	//sti();
-	op_table_t* operations = desc[fd].file_op_table_ptr; 
-	switch(desc[fd].flags & FILE_TYPE){
-		case RTC:
-			return operations->read();
-		case DIRECTORY:
-			return operations->read(NAME_LENGTH, (uint8_t*)buf);
-		case REGULAR_FILE:
-			name = return_dentry_by_ptr(desc[fd].inode_ptr);
-			ret = operations->read((uint8_t*)name, desc[fd].file_position, nbytes, (uint8_t*)buf);
-			desc[fd].file_position += ret;
-			return ret;
-		case STDIN:
-            return operations->read(nbytes, buf);
-		default:
-			return ERROR;
-	}
+	return desc[fd].file_op_table_ptr->read(desc[fd].inode_ptr, desc[fd].file_position, nbytes, (uint8_t*)buf);
 }
 
 int32_t kwrite (int32_t fd, const void *buf, int32_t nbytes)
 {
-	//sti();
 	if(fd < 0 || fd >= FILE_ARRAY_SIZE || buf == NULL || nbytes < 0
-		|| !(desc[fd].flags & FD_IN_USE)) {
+		|| !(desc[fd].flags & FD_IN_USE) || ((desc[fd].flags & FILE_TYPE) != RTC && 
+		(desc[fd].flags & FILE_TYPE) !=DIRECTORY && (desc[fd].flags & FILE_TYPE) != REGULAR_FILE && 
+		(desc[fd].flags & FILE_TYPE) != STDOUT)) {
 		return ERROR;
 	}
-
-	op_table_t *operations = desc[fd].file_op_table_ptr;
-	switch (desc[fd].flags & FILE_TYPE)
-	{
-		case RTC:
-			return operations->write((uint32_t)buf);
-		case DIRECTORY:
-			return operations->write();
-		case REGULAR_FILE:
-			return operations->write();
-		case STDOUT:
-		    return operations->write(nbytes, buf);
-		default:
-			return ERROR;
-	}
+	return desc[fd].file_op_table_ptr->write(fd, buf, nbytes);
 }
 
 int32_t kclose(int32_t fd)
 {
-	//sti();
-	if (fd < 0 || fd >= FILE_ARRAY_SIZE || !(desc[fd].flags & FD_IN_USE))
+	if (fd < FD_START || fd >= FILE_ARRAY_SIZE || !(desc[fd].flags & FD_IN_USE))
 		return ERROR;
 
 	op_table_t *operations = (op_table_t*)(desc[fd].file_op_table_ptr);
@@ -402,7 +392,33 @@ void setup_test()
 
 }
 
-int32_t kget_args(uint8_t* buf, int32_t nbytes) { return ERROR;}
-int32_t kvidmap(uint8_t** screen_start) { return ERROR;}
-int32_t kset_handler(int32_t signum, void* handler_address) { return ERROR;}
-int32_t ksigreturn(void) { return ERROR;}
+int32_t kvidmap(uint8_t** screen_start) 
+{ 
+	if (ERROR == address_in_user((int32_t)(screen_start), curr_process->pid))
+		return ERROR;
+
+	int ret = map_vid_memory(curr_process->pid);
+
+	if (ret == ERROR) return ERROR;
+
+	*screen_start = (uint8_t*)VIRT_VID_MEM;
+	
+	return VIRT_VID_MEM;
+}
+
+file_descriptor_t* get_fd_entry(int32_t fd)
+{
+	return (&(desc[fd]));
+}
+
+void increment_position(inode_t* inode, int amt)
+{
+	if (inode == NULL) return;
+	int i;
+	for (i = FD_START; i < FILE_ARRAY_SIZE; i++) {
+		if (desc[i].inode_ptr == inode) {
+			desc[i].file_position += amt;
+		}
+	} 
+}
+

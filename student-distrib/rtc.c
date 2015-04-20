@@ -15,30 +15,42 @@ extern volatile uint8_t rtc_flag;
 static uint8_t initialized = 0; 
 
 
- int rtc_open() {
-
+int rtc_open() {
+	if (initialized) return 0;
+ 	
  	/* initialize */
  	rtc_init();
 
  	/* set frequency to 2 Hz */
- 	if (rtc_write(START_FREQUENCY) == ERROR) return ERROR;
-
+	uint32_t start = START_FREQUENCY;
+// 	if (rtc_write(START_FREQUENCY) == ERROR) return ERROR;
+ 	if (rtc_write(0,(const void*)(&start),0) == ERROR) return ERROR;
  	initialized = 1;
+ 	rtc_flag = 0;
  	return 0;
  }
 
-int rtc_read() {
+//int rtc_read() {
+int rtc_read(uint32_t* ptr, int offset, int count, uint8_t * buf)
+{
 	/* wait for rtc flag to become 1 due to rtc interrupt handler */
-	while (!rtc_flag);
-
+	while (1)
+	{
+		cli();
+		if (rtc_flag == 1)
+			break;
+		sti();
+	}
 	/* reset rtc flag for next rtc interrupt */
+	cli();
 	rtc_flag = 0;
-
+	sti();
 	return 0;
 };
 
-int rtc_write(uint32_t frequency) {
-
+//int rtc_write(uint32_t frequency) {
+int rtc_write(int32_t fd, const void* buf, int32_t nbytes) {
+	uint32_t frequency = *((uint32_t*)(buf));
 	/* CHECK: frequency between [2, 1024 Hz] */
 	if (frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY) return ERROR;
 

@@ -1,4 +1,5 @@
 #include "file_system.h"
+#include "file_array.h"
 
 static void *file_system;
 static boot_block_t *boot_block;
@@ -14,7 +15,7 @@ static int curr_file_number;
 #define NUM_INODES() (boot_block->fs_info.num_inodes)
 #define NUM_DATA_BLOCKS() (boot_block->fs_info.num_data_blocks)
 #define SIZE_LOCATION 45
-
+#define FNAME_SIZE 32
 inode_t* get_inode_ptr(int inode_num)
 {
 	if (inode_num < 0) return (inode_t*)ERROR;
@@ -77,11 +78,21 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 
 unsigned char * return_dentry_by_ptr(inode_t *inode)
 {
+	int i;
 	if (inode == NULL) return NULL;
 
- 	int inode_num = ((uint32_t)inode - (uint32_t)inodes) / INODE_SIZE();
+ 	int inode_number = ((uint32_t)inode - (uint32_t)inodes) / INODE_SIZE();
+	
+	int number_dir_entries = NUM_DIR_ENTRIES();
 
- 	return (unsigned char*)&(boot_block->entries[inode_num].file_name);
+	// search for right dir entry in the boot block based on inode number
+	for (i = 0; i < number_dir_entries; i++) {
+		if ( boot_block->entries[i].inode_num == inode_number ) 
+			return (unsigned char *) boot_block->entries[i].file_name;
+	}
+
+	// if you can't find the right dir entry in the boot block, return error
+ 	return NULL;
 }
 
 int32_t read_data(inode_t* inode, uint32_t offset, uint8_t* buf, uint32_t length)
@@ -96,23 +107,25 @@ int32_t read_data(inode_t* inode, uint32_t offset, uint8_t* buf, uint32_t length
 //	i_ptr = (inode_t*)(inodes + (inode * INODE_SIZE()));
 
 	if (buf == NULL || /*inode > (NUM_INODES()-1) || inode < 0*/ inode == NULL
-		|| length < 0 || offset < 0 || i_ptr == NULL || offset > i_ptr->length) return ERROR;
+		|| length < 0 || offset < 0 || i_ptr == NULL)
+	if (offset > i_ptr->length) return 0;
   
 	
 	block_idx = offset / BLOCK_SIZE;
 	ret = 0; 
 
  	for(i = 0; i < length; i++) {		
-		if(offset + i > i_ptr->length) break;
+		if(offset + i >= i_ptr->length) break;
 		
 		data_idx = i_ptr->data_blocks[block_idx];
 		if (data_idx > (NUM_DATA_BLOCKS() - 1)) return ERROR;
 		
 		d_ptr = (data_block_t*)(data + data_idx * BLOCK_SIZE);
 
-		if((offset+i) % BLOCK_SIZE == 0 && i != 0)
+		if((offset+i+1) % BLOCK_SIZE == 0)
+		{
 			block_idx++;
-		
+		}
 		ret++;
 		buf[i] = d_ptr->data[(offset+i) % BLOCK_SIZE];
 	}
@@ -149,24 +162,43 @@ int write_dec_to_char(int num, uint8_t *buf)
 }
 
 int fs_open() { return 0; }
-int fs_read(uint8_t *fname, int offset, int count, uint8_t * buf)
+
+int fs_read_by_name(uint8_t *fname, int offset, int count, uint8_t * buf)
 {
 	dentry_t d;
 	int ret = read_dentry_by_name(fname, &d);
 	if (ret == ERROR) return ERROR;
 
 	inode_t* i_ptr = (inode_t*)(inodes + (d.inode_num * INODE_SIZE()));
-
 	return read_data(i_ptr, offset, buf, count);
 }
 
-int fs_write() { return -1; }
+//int fs_read(uint8_t *fname, int offset, int count, uint8_t * buf)
+int fs_read(inode_t* ptr, int offset, int count, uint8_t * buf)
+{
+	dentry_t d;
+//	file_descriptor_t* fdptr = (file_descriptor_t*)ptr;
+	uint8_t* fname = (uint8_t*) return_dentry_by_ptr(ptr);
+	int ret = read_dentry_by_name(fname, &d);
+	if (ret == ERROR) return ERROR;
+
+	inode_t* i_ptr = (inode_t*)(inodes + (d.inode_num * INODE_SIZE()));
+
+	ret = read_data(i_ptr, offset, buf, count);
+//	desc[fd].file_position += ret;
+	increment_position(ptr, ret);
+//	return read_data(i_ptr, offset, buf, count);
+	return ret;
+}
+
+int fs_write(int32_t fd, void* buf, int32_t nbytes) { return -1; }
 int fs_close() { return 0; }
 
 int dir_open() { 
 	return 0; 
 }
-int dir_read(uint32_t count, uint8_t *buf)
+//int dir_read(uint32_t count, uint8_t *buf)
+int dir_read(inode_t* p, int offset, int count, uint8_t * buf)
 {
 	int j;
 	int i_num;
@@ -178,7 +210,7 @@ int dir_read(uint32_t count, uint8_t *buf)
 		curr_file_number = 0;
 		return 0;
 	}
-
+	count = FNAME_SIZE;
 	read = 0;
 	i_num = boot_block->entries[curr_file_number].inode_num;
 	inode_t *ptr = (inode_t*)(inodes + (i_num * INODE_SIZE()) );
@@ -198,7 +230,7 @@ int dir_read(uint32_t count, uint8_t *buf)
 		}
 	}
 
-	if (count >  32) 
+	if (count >  FNAME_SIZE) 
 	{
 		for (j = read; j < SIZE_LOCATION; j++)
 		{
@@ -223,5 +255,5 @@ int dir_read(uint32_t count, uint8_t *buf)
 	return read;
 }
 
-int dir_write() { return -1; }
+int dir_write(int32_t fd, void* buf, int32_t nbytes) { return -1; }
 int dir_close() { return 0; }

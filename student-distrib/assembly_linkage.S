@@ -308,8 +308,9 @@ halt_return:
 	ret
 
 invalid_syscall_num:
-  movl $-1,%eax             
+  movl $-1, retval             
   popal
   popfl
+  movl retval, %eax
   iret
 

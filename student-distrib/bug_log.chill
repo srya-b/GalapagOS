@@ -1,0 +1,14 @@
+// bug log
+
+/* significant bugs */
+
+// Checkpoint 1
+1. inline assembly lacks '=' sign to declare output variable, paging doesn't work
+2. IRQ line of slave PIC not enabled so how could RTC interrupts even reach the procesor?
+3. when the keyboard saves a scan code to its data register, you have to read the value before you can ever accept another keypress
+
+// Checkpoint 2
+1. when you copy code from OSDev, you should actually know what it does so we don't lose points on magic numbers on functions that turn out not to be required at all (update_cursor)
+2. terminal write can write variably sized buffers (limiting writes was preventing full file printouts)
+3. magic numbers kill; do NOT use them
+4. we have to learn to use git

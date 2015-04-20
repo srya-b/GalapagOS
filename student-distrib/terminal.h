@@ -15,8 +15,10 @@ void put_char(char c);
 void put_char_out(char c);
 int terminal_open();
 void clear_terminal();
-int terminal_write(int count, uint8_t *buf);
-int terminal_read(int count, uint8_t *buf);
+//int terminal_write(int count, uint8_t *buf);
+int terminal_write(int32_t fd, const void* buf, int32_t nbytes);
+//int terminal_read(int count, uint8_t *buf);
+int terminal_read(uint32_t* ptr, int offset, int count, uint8_t * buf);
 int terminal_close();
 void update_cursor(int row, int col);
 #endif

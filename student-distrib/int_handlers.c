@@ -91,11 +91,8 @@ volatile uint8_t rtc_flag = 0;
  */
 
 void divide_by_zero() { 
-	//clear();
-	//printf("Divide-by-zero exception!\n");
-	terminal_write(DIVTXT, (uint8_t*)"Divide-by-zero\n");
+	terminal_write(0, (uint8_t*)"Divide-by-zero\n", DIVTXT);
 	khalt(EHALT);
-	//while(1) { }
 }
 
 /* 
@@ -107,12 +104,8 @@ void divide_by_zero() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void debugger() {
-	//clear();
-	//printf("Debugger exception!\n");
-	terminal_write(DEBTXT, (uint8_t*)"Debugger error\n");
+	terminal_write(0, (uint8_t*)"Debugger error\n", DEBTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -124,12 +117,8 @@ void debugger() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void NMI() {
-	//clear(); 
-	//printf("Non-Maskable Interrupt!\n");
-	terminal_write(NMITXT, (uint8_t*)"Non-Maskable Interrupt\n");
+	terminal_write(0, (uint8_t*)"Non-Maskable Interrupt\n", NMITXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -141,12 +130,8 @@ void NMI() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void breakpoint() { 
-	//clear();
-	//printf("Breakpoint!\n");
-	terminal_write(BRTXT, (uint8_t*)"Breakpoint\n");
+	terminal_write(0, (uint8_t*)"Breakpoint\n", BRTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -158,12 +143,8 @@ void breakpoint() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void overflow() { 
-	//clear();
-	//printf("Overflow!\n");
-	terminal_write(OVTXT, (uint8_t*)"Overflow\n");
+	terminal_write(0, (uint8_t*)"Overflow\n", OVTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -175,12 +156,8 @@ void overflow() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void bounds() { 
-	//clear();
-	//printf("Out of bounds!\n");
-	terminal_write(BNDTXT, (uint8_t*)"Out of bounds\n");
+	terminal_write(0, (uint8_t*)"Out of bounds\n", BNDTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -192,12 +169,8 @@ void bounds() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void invalid_opcode() { 
-	//clear();
-	//printf("Invalid opcode!\n");
-	terminal_write(IOPTXT, (uint8_t*)"Invalid opcode\n");
+	terminal_write(0, (uint8_t*)"Invalid opcode\n", IOPTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -209,12 +182,8 @@ void invalid_opcode() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void coprocessor() { 
-	//clear();
-	//printf("Coprocessor exception!\n");
-	terminal_write(COPTXT, (uint8_t*)"Coprocessor exception\n");
+	terminal_write(0, (uint8_t*)"Coprocessor exception\n", COPTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* double_fault
@@ -225,12 +194,8 @@ void coprocessor() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void double_fault() { 
-	terminal_write(DBFTXT, (uint8_t*)"Double Fault\n");
+	terminal_write(0, (uint8_t*)"Double Fault\n", DBFTXT);
 	khalt(EHALT);
-	//clear();
-	//printf("Double fault!\n");
-	//cli();
-	//while(1) { }
 }
 
 /* 
@@ -242,12 +207,8 @@ void double_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void coprocessor_segment() { 
-	terminal_write(COSTXT, (uint8_t*)"Coprocessor Segment\n");
+	terminal_write(0, (uint8_t*)"Coprocessor Segment\n", COSTXT);
 	khalt(EHALT);
-	// clear();
-	// printf("Coprocessor segment exception!\n");
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -259,12 +220,8 @@ void coprocessor_segment() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void invalid_tss() { 
-	terminal_write(TSSTXT, (uint8_t*)"Invalid TSS\n");
+	terminal_write(0, (uint8_t*)"Invalid TSS\n", TSSTXT);
 	khalt(EHALT);
-	// clear();
-	// printf("Invalid TSS!\n");
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -276,12 +233,8 @@ void invalid_tss() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void segment_not_present() { 
-	terminal_write(SNPTXT, (uint8_t*)"Segment not present\n");
+	terminal_write(0, (uint8_t*)"Segment not present\n", SNPTXT);
 	khalt(EHALT);
-	// clear();
-	// printf("Segment not present!\n");
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -293,12 +246,8 @@ void segment_not_present() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void stack_segment_fault() { 
-	terminal_write(SSFTXT, (uint8_t*)"Stack Segment Fault\n");
+	terminal_write(0, (uint8_t*)"Stack Segment Fault\n", SSFTXT);
 	khalt(EHALT);
-	// clear();
-	// printf("Stack segment fault!\n");
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -310,12 +259,8 @@ void stack_segment_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void general_protection_fault() {
-	terminal_write(GPFTXT, (uint8_t*)"General Protection Fault\n");
+	terminal_write(0, (uint8_t*)"General Protection Fault\n", GPFTXT);
 	khalt(EHALT);
-	// clear();
-	// printf("General protection fault!\n");
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -327,15 +272,11 @@ void general_protection_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void page_fault() {
-	//clear();
-	// int cr2;
-	// asm ("movl %%cr2,%0"
-	// 	:"=r"(cr2) : );
-	// printf("Page fault! %x\n", cr2);
-	terminal_write(PGFTXT, (uint8_t*)"Page Fault\n");
+	int cr2;
+	asm ("movl %%cr2,%0"
+		:"=r"(cr2) : );
+	printf("Page fault! %x\n", cr2);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -347,12 +288,8 @@ void page_fault() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void floating_point() {
-	// clear();
-	// printf("Floating point exception!\n");
-	terminal_write(FLPTXT, (uint8_t*)"Floating point\n");
+	terminal_write(0, (uint8_t*)"Floating point\n", FLPTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -364,12 +301,8 @@ void floating_point() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void alignment_check() {
-	// clear();
-	// printf("Alignment check exception!\n");
-	terminal_write(ALCTXT, (uint8_t*)"Alignment check\n");
+	terminal_write(0, (uint8_t*)"Alignment check\n", ALCTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -381,12 +314,8 @@ void alignment_check() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void machine_check() {
-	// clear();
-	// printf("Machine check exception!\n");
-	terminal_write(MCNTXT, (uint8_t*)"Machine Check\n");
+	terminal_write(0, (uint8_t*)"Machine Check\n", MCNTXT);
 	khalt(EHALT);
-	// cli();
-	// while(1) { }
 }
 
 /* 
@@ -398,12 +327,8 @@ void machine_check() {
  *   SIDE EFFECTS: prints exception message, disables interrupts
  */
 void SIMD_floating_point() {
-	terminal_write(SIMTXT, (uint8_t*)"SIMD Floating Point\n");
+	terminal_write(0, (uint8_t*)"SIMD Floating Point\n", SIMTXT);
 	khalt(EHALT);
-	// clear();
-	// printf("SIMD floating point exception!\n");
-	// cli();
-	// while(1) { }
 }
 
 /****************** INTERRUPTS ******************/
@@ -465,8 +390,8 @@ void keyboard_int() {
  *   SIDE EFFECTS: prints interrupt message, reads from Register C to allow more RTC ints to come in 
  */
 void rtc_int() {
+	send_eoi(RTC_INT);
 	outb(REG_C, RTC_IDX_PORT);	// read from register c
 	inb(RTC_WR_PORT);			// read in, but don't do anything with it
 	rtc_flag = 1;	
-	send_eoi(RTC_INT);
 }

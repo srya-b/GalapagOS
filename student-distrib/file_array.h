@@ -9,22 +9,24 @@
 #include "file_system.h"
 #include "terminal.h"
 #include "x86_desc.h"
+#include "types.h"
+//#include "process.h"
 #define FILE_ARRAY_SIZE 8
 #define MAX_ARGS 100
 #define MAX_COMMAND 33
 
 typedef struct op_table {
-	int (*open)();
-	int (*read)();
-	int	(*write)();
-	int (*close)();
+  int (*open)();
+  int (*read)();
+  int (*write)();
+  int (*close)();
 }  __attribute__((packed)) op_table_t;
 
 typedef struct file_descriptor {
-	op_table_t*	file_op_table_ptr;
-	inode_t* 	inode_ptr;
-	uint32_t 	file_position;
-	uint32_t 	flags;	
+  op_table_t* file_op_table_ptr;
+  inode_t*  inode_ptr;
+  uint32_t  file_position;
+  uint32_t  flags;  
 }  __attribute__((packed)) file_descriptor_t;
 
 typedef struct pcb {
@@ -56,6 +58,7 @@ int32_t kvidmap(uint8_t** screen_start);
 int32_t kset_handler(int32_t signum, void* handler_address);
 int32_t ksigreturn(void);
 int32_t init_process();
+void increment_position(inode_t* inode, int amt);
 
 #define set_esp(addr)               \
 do {                                \

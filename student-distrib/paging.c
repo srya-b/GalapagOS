@@ -2,10 +2,19 @@
 #include "lib.h"
 
 #define VID_MEM 0xb8000
+#define ADDRESS_BITS 32
 #define PAGE_BITS 12
+#define TABLE_BITS 10
+#define DIR_BITS 10
 #define KERNEL_DIR_ENTRY 1
 #define USR_DIR_ENTRY 32
 #define VIDMEM_DIR_ENTRY 0
+#define TEN_MASK 0x000003ff
+#define TWELVE_MASK 0x00000fff
+#define BIG_MASK 0x000fffff
+#define VIRT_VID_MEM 0xdeadb000
+#define VIRT_VIDMEM_DIR_ENTRY ((VIRT_VID_MEM >> 22) & TEN_MASK)
+#define VIRT_VIDMEM_TABLE_ENTRY ((VIRT_VID_MEM >> 12) & TEN_MASK)
 
 /* Directory ad table in in kernel space */
 static uint32_t dir[NUM_ENT] __attribute__((aligned (KB4)));
@@ -14,7 +23,7 @@ static uint32_t first_dir[NUM_ENT] __attribute__((aligned(KB4)));
 static uint32_t first_table[NUM_ENT] __attribute__((aligned(KB4)));
 static page_directory_t process_directories[NUM_TASKS];
 static page_table_t page_tables[NUM_TASKS];
-
+static vid_mem_table_t vid_tables[NUM_TASKS] __attribute__((aligned(KB4)));
 // static page_table_t page_tables;
 
 void new_init(void)
@@ -35,6 +44,8 @@ void new_init(void)
 			table_entry->r_w = 1;
 			/* Identity mape table base address */
 			table_entry->base_31_12 = i;
+			//vid_table[i] = 0;
+			vid_tables[j].table[i] = 2;
 		}
 	}
 
@@ -72,9 +83,24 @@ void new_init(void)
 	    process->read_write = 1;
 	    process->present = 1;
 
+	    /* set vid mem but nor present */
+	    ps = (page_dir_entry_small_t*)(&(pd->directory[VIRT_VIDMEM_DIR_ENTRY]));
+	    //table_entry = (page_table_entry_t*)(&vid_table[VIRT_VIDMEM_TABLE_ENTRY]);
+	    table_entry = (page_table_entry_t*)(&(vid_tables[pid].table[VIRT_VIDMEM_TABLE_ENTRY]));
+	    ps->present = 0;
+	    ps->read_write = 1;
+	    ps->table_base = ((uint32_t)(&(vid_tables[pid].table[0])) >> PAGE_BITS);
+	    ps->page_size = 0;
+	    ps->super = 1;
+	    ps->global_page = 1;
+	   	table_entry->usr_su = 1;
+	   	table_entry->present = 0;
+	   	table_entry->r_w = 1;
+	   	table_entry->base_31_12 = (VID_MEM >> PAGE_BITS) & BIG_MASK;
 	}
-
 	page_enable(void);
+	// printf("%x\n", process_directories[1].directory[(0xdeadb000 >> 22) & 0x3ff]);
+	// printf("%x\n", vid_tables[1].table[(0xdeadb000 >> 12) & 0x3ff]);
 }
 
 
@@ -156,7 +182,79 @@ int switch_paging(uint32_t pid) {
 	uint32_t* pd = &(process_directories[pid].directory[0]);
 	if (pd == NULL) return ERROR;
 
+	// page_dir_entry_small_t* ps = (page_dir_entry_small_t*)(&(process_directories[pid].directory[VIRT_VIDMEM_DIR_ENTRY]));
+	// ps->present = 1;
+	// page_table_entry_t* pt = (page_table_entry_t*)(&(vid_table[VIRT_VIDMEM_TABLE_ENTRY]));
+	// pt->present = 1;
 	set_cr3(pd);
 	return 0;
 }
 
+int get_dir_entry(int32_t vaddr)
+{
+	return (vaddr >> (PAGE_BITS + TABLE_BITS)) & TEN_MASK;
+}
+
+int get_table_entry(int32_t vaddr)
+{
+	return (vaddr >> PAGE_BITS) & TEN_MASK;
+}
+
+int get_page_offset_small(int32_t vaddr)
+{
+	return vaddr & TWELVE_MASK;
+}
+
+int get_page_offset_big(int32_t vaddr)
+{
+	return vaddr & BIG_MASK;
+}
+
+int address_mapped(int32_t vaddr, int pid)
+{
+	int dir_entry = get_dir_entry(vaddr);
+	page_dir_entry_small_t * curr_entry = (page_dir_entry_small_t*)&(process_directories[pid].directory[dir_entry]);
+	
+	if (curr_entry->present == 1)
+		return ERROR;
+	return 0;
+}
+
+int address_in_user(int32_t vaddr, int pid)
+{
+	if (pid < 0) return ERROR;
+	
+	int dir_entry = get_dir_entry(vaddr);
+	
+	if (dir_entry != USR_DIR_ENTRY) return ERROR;
+
+	return 0;
+}
+
+int map_vid_memory(int pid)
+{
+	if (pid < 0) return ERROR;
+
+	page_dir_entry_small_t* d = (page_dir_entry_small_t*)(&(process_directories[pid].directory[VIRT_VIDMEM_DIR_ENTRY]));
+	//if (d->present == 1) return ERROR;
+	page_table_entry_t* pt = (page_table_entry_t*)(&(vid_tables[pid].table[VIRT_VIDMEM_TABLE_ENTRY]));
+	pt->present = 1;	
+	d->present = 1;
+	// printf("asdasd\n");
+	// printf("%d\n", pid);
+	// printf("%x\n", *d);
+	// printf("%x\n", *pt);
+	set_cr3((uint32_t*)(&(process_directories[pid].directory[0])));
+	return 0;
+}
+
+int unmap_vid_memory(int pid)
+{
+	if (pid < 0) return ERROR;
+
+	page_dir_entry_small_t* d = (page_dir_entry_small_t*)(&(process_directories[pid].directory[VIRT_VIDMEM_DIR_ENTRY]));
+	d->present = 0;
+	page_table_entry_t* pt = (page_table_entry_t*)(&(vid_tables[pid].table[VIRT_VIDMEM_TABLE_ENTRY]));
+	pt->present = 0;
+	return 0;
+}

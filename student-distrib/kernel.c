@@ -246,11 +246,15 @@ entry (unsigned long magic, unsigned long addr)
 	
 	/*Initialize paging*/
 	// paging_init();
-	new_init();	
 	terminal_open();
+	new_init();	
 
 	// save pcb for idle process
 	sti();
+	//	printf("\n\n\n\n");
+//	printf("%x\n", dir[1]);
+	// printf("%x\n", dir[(0xdeadb000 >> 22) & 0x3ff]);
+	// printf("%x\n", vid_tables[0].table[(0xdeadb000 >> 12) & 0x3ff]);
 
  //	update_cursor(0,0);
 	fs_init(fs_address);
@@ -258,6 +262,10 @@ entry (unsigned long magic, unsigned long addr)
 	clear_terminal();
 
 	kexecute((uint8_t*)"shell");
+	// // uint8_t temp_term[6000];
+	// fs_read("grep", 0, 6000, temp_term);
+	// temp_term[5999] = '\0';
+	// terminal_write(5349, temp_term);
 
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");

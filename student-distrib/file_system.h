@@ -40,15 +40,20 @@ typedef struct data_block {
 	uint8_t data[KB4];
 } __attribute__((packed)) data_block_t;
 
+
 int32_t fs_init(uint32_t fs_address);
 int fs_open();
-int fs_read(uint8_t *fname, int offset, int count, uint8_t * buf);
-int fs_write();
+int fs_read_by_name(uint8_t *fname, int offset, int count, uint8_t * buf);
+//int fs_read(uint8_t *fname, int offset, int count, uint8_t * buf);
+int fs_read(inode_t* ptr, int offset, int count, uint8_t * buf);
+// does not change fd array
+int fs_write(int32_t fd, void* buf, int32_t nbytes);
 int fs_close();
 
 int dir_open();
-int dir_read(uint32_t count, uint8_t *buf);
-int dir_write();
+//int dir_read(uint32_t count, uint8_t *buf);
+int dir_read(inode_t* p, int offset, int count, uint8_t * buf);
+int dir_write(int32_t fd, void* buf, int32_t nbytes);
 int dir_close();
 
 /* helpful functions */
