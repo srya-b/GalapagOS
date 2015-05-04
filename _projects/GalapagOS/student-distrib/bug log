@@ -1,0 +1,4 @@
+bug log
+
+-- forgot to set child pointer in PCB to null when halting
+-- not rewriting pcb in halt
