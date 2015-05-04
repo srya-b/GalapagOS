@@ -1,0 +1,104 @@
+// bug log GALAPAGOS
+
+/* significant bugs */
+
+____Checkpoint 1____
+1) Date: 3/10/2015
+   Problem: Paging doesn't work
+   Solution:  paging.h - page_enable inline assembly lacks '=' sign to declare output variable
+   Time to fix:  2 hours
+
+2) Date: 3/14/2015
+   Problem: RTC test interrputs not spamming garbage to screen though we've initialized the rtc
+   Solution:  IRQ line of slave PIC enabled so RTC interrupts can reach the procesor
+   Time to fix:  1 hour
+
+3) Date: 3/15/2015
+   Problem: Keyboard handler written, irq line written in idt, but no keys registered
+   Solution:  when the keyboard saves a scan code to its data register, you have to read the value before you can ever accept another keypress
+   Time to fix:  2 hours
+
+____Checkpoint 2____
+1) Date: 3/27/2015
+   Problem: terminal_write is incapable of full file printouts
+   Solution:  terminal write can now write variably sized buffers (limiting writes to 32 bytes was preventing full file printouts)
+   Time to fix:  1 hour
+
+2) Date: 3/28/2015
+	Problem: we can't find the file to open in the boot block
+	Solution: we were using the inode number as a consecutive index into the boot block, which is inaccurate. Wwe instead have to iterate over the entries in the boot block until we find a block with matching inode number. Then we have found the proper data entry were the file data will be stored.
+	Time to fix:  2 hours
+
+3) Date: 3/29/2015
+	Problem: rtc reads happen too fast (rtc initially written incorrectly, problem later manifested itself in checkpoint 4 handin)
+	Solution: in order to wait an entire rtc period on rtc_read, we set the flag to 0 immediately before waiting to see when it becomes 1 (fixed in after checkpoint 4 submission). Thanks for the catch Jeremy and Thomas!
+	Time to fix:  30 minutes
+
+4) Date: 3/30/2015
+	Problem: terminal_write doesn't append newline (or start on next line)
+	Solution: we changed it so your y terminal coordinate is incremented upon apprehension of a newline in a terminal write and in the case of put_char (to be used by user programs), we write the newline into the buffer. Thanks for the catch Mika!
+	Time to fix:  30 minutes
+
+____Checkpoint 3____
+1) Date: 4/10/2015
+	Problem: ending ascii strings in files not properly loaded into physical memory
+	Solution: read_data had an off-by-1 error when switching data blocks in the middle of a file load into memory
+	Time to fix:  2 hours
+
+2) Date: 4/11/2015
+	Problem: file_open returns successful on empty string
+	Solution: error checking is wrong; we should return error on the attempted read of an empty string
+	Time to fix:  30 minutes
+
+3) Date: 4/12/2015
+	Problem: Page faults & general protection faults several times
+	Solution: paging.c - We forgot to set the read-write bit, forgot to set super user bit to 1 so user could access addresses before setting the CR3; one time we forgot to set the present bit in the table entry though it was set in the directory entry.
+	Time to fix: collectively 5-6 hours
+
+____Checkpoint 4____
+1) Date: 4/15/2015
+	Problem: cat doesn't look like it's executed, lots of the screen is blank
+	Solution: put_char_out() in terminal.c was changed so that NULL characters are not written to the screen; originally NULL characters were flooding the terminal_writes()
+	Time to fix:  1 hour
+
+2) Date: 4/19/2015
+	Problem: kvidmap general protection fault
+	Solution: We set up all the paging so deadbe000 would map directly into vga memory for the fish program to use, but we didn't set the super user bit to 1 for user privilege. Thanks for the catch at early Sunday office hours Mika!
+	Time to fix:  2 hours
+
+3) Date: 4/19/2015
+	Problem: we call fish but it doesn't show up on the screen! paging is right though!!
+	Solution: We had set the terminal foreground and background colors to black. We need to set the foreground to white where the fish prints!!!! We discovered this problem put typing a bunch of text to the terminal and seeing the fish animation where we had written write characters but nowhere else.
+	Time to fix:  3 hours
+
+4) Date: 4/20/2015
+	Problem: cat rtc returns too quickly
+	Solution: in order to wait an entire rtc period on rtc_read, we set the flag to 0 immediately before waiting to see when it becomes 1 (fix from checkpoint 1 error, fixed after handin)
+	Time to fix:  30 minutes
+
+____Checkpoint 5____
+1) Date: 5/1/2015
+	Problem: scroll in one terminal allows user to wrap around text and then overwrite "ECE391OS>", scrolls happens but later user input text isn't properly written to screen
+	Solution:  we added a user triggered flag for terminate write which will make sure when a user writes to the end of the terminal, the screen will scroll and the user will then write directly to video memory; previously the terminal write could write to the current processes' video buffer in the case of a user triggered scroll, which would not output characters to the vga directly
+	Time to fix:  2 hour
+
+2) Date: 5/2/2015
+   Problem: pingpong in terminal2 after a program like ls completes in terminal1 bleeds through to terminal1
+   Solution:  khalt was not properly removing the child process from its parent; now it does so traversal through process tree necessary to swap video memory and buffer memory in a terminal switch is accurate (page table entries assigned properly and cr3 set)
+   Time to fix:  2 hours
+
+3) Date: 5/2/2015
+	Problem: khalt doesn't return properly; return value isn't passed and syerr() includes many failures
+	Solution:  when we halt from a child process, we return the halt status through the parent process' process control block in a ret_status variable; the parent process will have been unscheduled when the child ran -- it is rescheduled as the child is unscheduled and the parent runs the end of kexecute's code (which was called to start the child process). The parent process's ret status variable (assigned by the child on halt) is returned through kexecute.
+	Time to fix:  2 hour
+
+4) Date: 5/3/2015
+	Problem: can't exit from an initial shell (pids 0, 1, 2), OS crashes
+	Solution: upon khalt in one of these initial shells, we simpy modify the eip and the user stack pointer in the shell's iret context and return from halt (this will move the %ebp and set us up for a perfect iret back into the shell at the end of syscall assembly linkage). Thanks for the suggestion Robert!
+	Time to fix:  4 hours
+
+EXTRA CREDIT
+1) Date: 3/28/2015
+	Problem: cursor doesn't show when we backspace
+	Solution: write the cursor one location to the right set the foreground color back to white after it has been set to black by a backspace
+	Time to fix: 1 hour
