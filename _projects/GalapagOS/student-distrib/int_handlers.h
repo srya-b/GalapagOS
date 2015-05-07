@@ -60,6 +60,8 @@
  void keyboard_int();
 
  void rtc_int();
+ 
+void init_hist();
 
 #define call_halt(void)             \
 do {                                \

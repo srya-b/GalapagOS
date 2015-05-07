@@ -263,6 +263,7 @@ entry (unsigned long magic, unsigned long addr)
 	fs_init(fs_address);
 	
 	clear_terminal();
+	init_hist();
 	kexecute((uint8_t*)"shell");
 
 	/* Spin (nicely, so we don't chew up cycles) */

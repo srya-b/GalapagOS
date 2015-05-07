@@ -6,6 +6,11 @@
 #define RCTRL 0x1d
 #define CAPS 0x3a
 #define LALT 0x38
+/////////////////////
+#define UP   0x48
+#define DOWN 0x50
+#define ENTER 0x1C
+//////////////////////
 #define F1 0x3b
 #define F2 0x3c
 #define F3 0x3d
@@ -32,6 +37,16 @@
 #define SIMTXT 20
 #define KEYBOARD_TYPES 4
 #define KEYS 128
+//////////////////////
+#define MAXHIST 8
+#define NUM_TERMINALS 3
+int num_hist[NUM_TERMINALS] = {0, 0, 0};
+int curr_hist[NUM_TERMINALS] = {0, 0, 0};
+int min_hist[NUM_TERMINALS] = {0, 0, 0};
+static char modified_hist[NUM_TERMINALS][MAXHIST+1][128];
+static char hist[NUM_TERMINALS][MAXHIST+1][128];
+static char curr_cmd[NUM_TERMINALS][128];
+/////////////////////////////
 
 static unsigned char kbdus[KEYBOARD_TYPES][KEYS] =
 {{
@@ -348,6 +363,7 @@ void SIMD_floating_point() {
 void keyboard_int() {
     send_eoi(KEYBOARD_INT);
 		int key_scancode = inb(KEYBOARD_PORT);
+		int term = get_curr_terminal();
 		if (key_scancode == LSHIFT || key_scancode == RSHIFT)
 			shift = 1;
 		else if (key_scancode == (LSHIFT + RELEASE) || key_scancode == (RSHIFT + RELEASE))
@@ -364,6 +380,45 @@ void keyboard_int() {
 			alt = 1;
 		else if (key_scancode == (LALT + RELEASE))
 			alt = 0;
+		else if (key_scancode == UP && curr_hist[term] > min_hist[term]){
+			hist_copy_from(modified_hist[term][(curr_hist[term]-1) % (MAXHIST+1)]);
+			int i;
+			for(i=0;i < 128; i++){
+				curr_cmd[term][i] = modified_hist[term][(curr_hist[term]-1) % (MAXHIST+1)] [i];
+			}
+			curr_hist[term]--;
+		}
+		else if (key_scancode == DOWN && curr_hist[term] < num_hist[term]){
+			hist_copy_from(modified_hist[term][(curr_hist[term]+1) % (MAXHIST+1)]);
+			int i;
+			for(i=0;i<128;i++){
+				curr_cmd[term][i] = modified_hist[term][(curr_hist[term]+1) % (MAXHIST+1)][i];
+			}
+			curr_hist[term]++;
+		}
+		else if(key_scancode == ENTER && curr_cmd[term][0] != '\0'){
+			int i;
+			for(i=0; i<128; i++){
+				hist[term][num_hist[term] % (MAXHIST+1)][i] = curr_cmd[term][i];
+			}
+			curr_hist[term] = ++num_hist[term];
+
+			if(num_hist[term] > MAXHIST)
+				min_hist[term]++;
+
+			for(i=0; i <128; i++){
+				hist[term][curr_hist[term] % (MAXHIST+1)][i] = '\0';
+			}
+			int j;
+			for(i=0; i < MAXHIST + 1; i++){
+				for(j=0; j < 128; j++){
+					modified_hist[term][i][j] = hist[term][i][j];
+				}
+			}
+
+			for(i=0; i < 128; i++)
+				curr_cmd[term][i] = '\0';
+		}
 
 		if (key_scancode <= SCAN_LIMIT) {
 			if (alt == 1 && (key_scancode == F1 || key_scancode == F2 || key_scancode == F3))
@@ -371,24 +426,39 @@ void keyboard_int() {
 			else if (shift == 1 && caps_lock == 0)
 			{
 				put_char(kbdus[1][key_scancode]);
+				if(key_scancode != ENTER){
+					curr_cmd[term][strlen(curr_cmd[term])] = kbdus[1][key_scancode];
+					modified_hist[term][curr_hist[term] % (MAXHIST+1)][strlen(modified_hist[term][curr_hist[term] % (MAXHIST+1)])] = kbdus[1][key_scancode];
+				}
 			}
 			else if (shift == 0 && caps_lock == 1)
 			{
 				put_char(kbdus[2][key_scancode]);
+				if(key_scancode != ENTER){
+					curr_cmd[term][strlen(curr_cmd[term])] = kbdus[2][key_scancode];
+					modified_hist[term][curr_hist[term] % (MAXHIST+1)][strlen(modified_hist[term][curr_hist[term] % (MAXHIST+1)])] = kbdus[2][key_scancode];
+				}
 			}
 			else if (shift == 1 && caps_lock == 1)
 			{
 				put_char(kbdus[3][key_scancode]);
+				if(key_scancode != ENTER){
+					curr_cmd[term][strlen(curr_cmd[term])] = kbdus[3][key_scancode];
+					modified_hist[term][curr_hist[term] % (MAXHIST+1)][strlen(modified_hist[term][curr_hist[term] % (MAXHIST+1)])] = kbdus[3][key_scancode];
+				}
 			}
 			else if (ctrl == 1 && kbdus[0][key_scancode] == 'l')
 			{
 				clear_terminal();
 			}
-			else 
+			else {
 				put_char(kbdus[0][key_scancode]);
+				if(key_scancode != ENTER){
+					curr_cmd[term][strlen(curr_cmd[term])] = kbdus[0][key_scancode];
+					modified_hist[term][curr_hist[term] % (MAXHIST+1)][strlen(modified_hist[term][curr_hist[term] % (MAXHIST+1)])] = kbdus[0][key_scancode];
+				}
+			}			
 		}
-
-
 }
 
 /* 
@@ -405,3 +475,19 @@ void rtc_int() {
 	inb(RTC_WR_PORT);			// read in, but don't do anything with it
 	rtc_flag = 1;	
 }
+
+void init_hist(){
+	int i, j;
+	for(j=0; j < NUM_TERMINALS; j++){
+		for(i = 0; i < 128; i++){
+			curr_cmd[j][i] = '\0';
+		}
+	}
+	for(j=0; j < NUM_TERMINALS; j++){
+		for(i = 0; i <= MAXHIST; i++){
+			hist[j][i][0] = '\0';\
+		}
+	}
+}
+
+
