@@ -24,6 +24,7 @@ int terminal_read(uint32_t* ptr, int offset, int count, uint8_t * buf);
 int terminal_close();
 void update_cursor(int row, int col);
 void switch_terminals(int term);
+void hist_copy_from(char* src);
 int get_curr_terminal();
 #endif
 #endif

@@ -485,6 +485,19 @@ cli();
 sti();
 }
 
+void hist_copy_from(char* src){
+    int i;
+    for(i = 0; i < 128; i++){
+    	put_char(BACKSPACE);
+    }
+
+    for(i = 0; i < 128; i++){
+    	if(src[i] == '\0') break;
+    	put_char(src[i]);
+    }
+	return;
+}
+
 /*
  * get_curr_terminal
  * DESCRIPTION: returns the terminla that is being displayed on the screen
